@@ -46,10 +46,10 @@ namespace pdal
 
 static StaticPluginInfo const s_info
 {
-    "filters.overlay",
-    "Assign values to a dimension based on the extent of an OGR-readable data "
+    "filters.distance",
+    "Compute distance from points to a geometry of an OGR-readable data "
         " source or an OGR SQL query.",
-    "http://pdal.io/stages/filters.overlay.html"
+    "http://pdal.io/stages/filters.distance.html"
 };
 
 CREATE_STATIC_STAGE(DistanceFilter, s_info)
