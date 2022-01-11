@@ -327,6 +327,15 @@ bool Polygon::crosses(const Polygon& p) const
     return m_geom->Crosses(p.m_geom.get());
 }
 
+double Polygon::distance(double x, double y) const
+{
+    throwNoGeos();
+
+    OGRPoint o_p(x, y);
+
+    return m_geom->Distance(&o_p);
+}
+
 std::vector<Polygon> Polygon::polygons() const
 {
     std::vector<Polygon> polys;

@@ -1,5 +1,5 @@
 /******************************************************************************
-* Copyright (c) 2016, Howard Butler (howard@hobu.co)
+* Copyright (c) 2022, Hobu Inc. <info@hobu.co>
 *
 * All rights reserved.
 *
@@ -13,7 +13,7 @@
 *       notice, this list of conditions and the following disclaimer in
 *       the documentation and/or other materials provided
 *       with the distribution.
-*     * Neither the name of Hobu, Inc. nor the
+*     * Neither the name of Hobu, Inc. or Flaxen Geo Consulting nor the
 *       names of its contributors may be used to endorse or promote
 *       products derived from this software without specific prior
 *       written permission.
@@ -31,66 +31,71 @@
 * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 * OF SUCH DAMAGE.
 ****************************************************************************/
+
 #pragma once
 
-#include <pdal/Log.hpp>
-#include <pdal/PointRef.hpp>
-#include <pdal/SpatialReference.hpp>
-#include <pdal/Geometry.hpp>
+#include <pdal/Filter.hpp>
+#include <pdal/Polygon.hpp>
+#include <pdal/Streamable.hpp>
+
+#include <map>
+#include <memory>
+#include <string>
+
+typedef void *OGRLayerH;
 
 namespace pdal
 {
 
-class BOX2D;
-class BOX3D;
-
-class PDAL_DLL Polygon : public Geometry
+namespace gdal
 {
-    using Point = std::pair<double, double>;
-    using Ring = std::vector<Point>;
-    struct PrivateData;
+    class ErrorHandler;
+}
+
+typedef std::shared_ptr<void> OGRDSPtr;
+typedef std::shared_ptr<void> OGRFeaturePtr;
+typedef std::shared_ptr<void> OGRGeometryPtr;
+
+class Arg;
+
+class PDAL_DLL DistanceFilter : public Filter, public Streamable
+{
+    struct PolyVal
+    {
+        Polygon geom;
+        int32_t val;
+    };
 
 public:
-    Polygon();
-    virtual ~Polygon();
+    DistanceFilter() : m_ds(0), m_lyr(0)
+    {}
 
-    Polygon(const std::string& wkt_or_json,
-        SpatialReference ref = SpatialReference());
-    Polygon(const BOX2D&);
-    Polygon(const BOX3D&);
-    Polygon(OGRGeometryH g);
-    Polygon(OGRGeometryH g, const SpatialReference& srs);
-    Polygon(const Polygon& poly);
-    Polygon& operator=(const Polygon& src);
-
-    virtual void modified() override;
-    virtual void clear() override;
-    void simplify(double distance_tolerance, double area_tolerance,
-        bool preserve_topology = true);
-    double area() const;
-    std::vector<Polygon> polygons() const;
-
-    bool covers(const PointRef& ref) const;
-    bool equal(const Polygon& p) const;
-    bool overlaps(const Polygon& p) const;
-    bool contains(double x, double y) const;
-    bool contains(const Polygon& p) const;
-    bool intersects(const Polygon& p) const;
-    bool disjoint(const Polygon& p) const;
-    bool touches(const Polygon& p) const;
-    bool within(const Polygon& p) const;
-    bool crosses(const Polygon& p) const;
-    double distance(double x, double y) const;
-    Ring exteriorRing() const;
-    std::vector<Ring> interiorRings() const;
+    std::string getName() const { return "filters.distance"; }
 
 private:
-    void init();
-    void removeSmallRings(double tolerance);
-    void removeSmallHoles(double tolerance);
+    virtual void addArgs(ProgramArgs& args);
+    virtual void spatialReferenceChanged(const SpatialReference& srs);
+    virtual bool processOne(PointRef& point);
+    virtual void initialize();
+    virtual void addDimensions(PointLayoutPtr layout);
+    virtual void prepared(PointTableRef table);
+    virtual void ready(PointTableRef table);
+    virtual void filter(PointView& view);
 
-    std::unique_ptr<PrivateData> m_pd;
+    DistanceFilter& operator=(const DistanceFilter&) = delete;
+    DistanceFilter(const DistanceFilter&) = delete;
+
+    typedef std::shared_ptr<void> OGRDSPtr;
+
+    OGRDSPtr m_ds;
+    OGRLayerH m_lyr;
+    std::string m_dimName;
+    std::string m_datasource;
+    std::string m_column;
+    std::string m_query;
+    std::string m_layer;
+    Dimension::Id m_dimId;
+    std::vector<PolyVal> m_polygons;
 };
 
 } // namespace pdal
-
